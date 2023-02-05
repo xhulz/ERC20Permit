@@ -2,6 +2,7 @@
   "dependencies": {
     "@metamask/eth-sig-util": "^5.0.2",
     "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/test-helpers": "^0.5.16"
+    "@openzeppelin/test-helpers": "^0.5.16",
+    "bn.js": "^5.2.1"
   }
 }

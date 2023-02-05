@@ -1,11 +1,20 @@
 const MyToken = artifacts.require("./MyToken.sol");
 
+const { expectRevert } =  require('@openzeppelin/test-helpers');
+const {setSignature, getDigest} =  require('../utils/signature');
+
 contract("MyToken", accounts => {
+  // YOU NEED TO PUT THE OWNER PRIVATE KEY HERE, TO SIGN THE PERMIT
+  const ownerPrivateKey = Buffer.from('39f3c3220f1cca5d72e53aba4915adf8df91c850545e2bcde409485250ed1bcd', 'hex');
+  const chainId = 1;
+
   let token;
+  let name;  
 
   beforeEach(async () => {
     token = await MyToken.deployed();
-  });
+    name = await token.name();
+  }); 
 
   it("should allow owner to mint", async function() {
     const owner = accounts[0];
@@ -54,7 +63,7 @@ contract("MyToken", accounts => {
   });
 
   it("should set emergency address correctly", async function() {
-    const emergencyAddress = accounts[1];
+    const emergencyAddress = accounts[2];
 
     await token.setEmergencyAddress(emergencyAddress, { from: accounts[0] });
 
@@ -82,8 +91,80 @@ contract("MyToken", accounts => {
     }
   });
 
-  // TODO: 
-  // Add test for transferEmergency with valid signature using @metamask/eth-sig-util
-  // Add test for transferEmergency with invalid signature using @metamask/eth-sig-util
+  it('should permits and emits approval', async () => {
+    const [owner, spender] = accounts;
+  
+    // Mints some tokens to the owner
+    await token.mint(owner, 1000, { from: owner });
 
+    // Creates the approval request
+    const approve = {
+      owner: owner,
+      spender: spender,
+      value: '100'
+    };
+  
+    const deadline = '100000000000000';
+    const nonce = '0';
+  
+    // Gets the EIP712 digest
+    const digest = getDigest(name, token.address, chainId, approve, nonce, deadline);
+  
+    // Signs it
+    const { v, r, s } = setSignature(digest, ownerPrivateKey);
+  
+    // Approves it
+    const receipt = await token.setPermission(approve.owner, approve.spender, approve.value, deadline, v, r, s);
+    const event = receipt.logs[0];
+  
+    // Tests the approval
+    assert.equal(event.event, 'Approval');
+    assert.equal(await token.nonces(owner), 1);
+    assert.equal(await token.allowance(approve.owner, approve.spender), approve.value);
+  
+    // Re-using the same sig doesn't work for replay-protection
+    await expectRevert(
+      token.permit(approve.owner, approve.spender, approve.value, deadline, v, r, s),
+      'ERC20Permit: invalid signature'
+    )
+  
+    // Invalid ecrecover's return address(0x0), this case must fail
+    await expectRevert(
+      token.permit(
+        '0x0000000000000000000000000000000000000000',
+        approve.spender,
+        approve.value,
+        deadline,
+        '0x99',
+        r,
+        s
+      ),
+      'VM Exception while processing transaction: revert ECDSA: invalid signature'
+    )
+  });
+
+  it("should transfer the sender's tokens to the emergency address", async () => {
+    const [owner, spender] = accounts;
+
+    // Get the initial balance of the sender and the recipient
+    const initialOwnerBalance = await token.balanceOf(owner);
+    const initialEmergencyBalance = await token.balanceOf(await token._emergencyAddresses(owner));
+
+    // Get spender allowance
+    const spenderAllowance = await await token._spenderAllowance(spender);
+
+    // // Call the transferEmergency function
+    const result = await token.transferEmergency({ from: spender });
+    assert.equal(result.logs[0].event, "Approval");
+
+    // Get the updated balance of the sender and the recipient
+    const updatedOwnerBalance = await token.balanceOf(owner);
+    const updatedEmergencyBalance = await token.balanceOf(await token._emergencyAddresses(owner));
+
+    // Check if the tokens were transferred correctly
+    assert.equal(initialOwnerBalance.toNumber(), 1000);
+    assert.equal(initialEmergencyBalance.toNumber(), 0);
+    assert.equal(updatedOwnerBalance.toNumber(), initialOwnerBalance.toNumber() - spenderAllowance.toNumber());
+    assert.equal(updatedEmergencyBalance.toNumber(), spenderAllowance.toNumber());
+  });  
 });
