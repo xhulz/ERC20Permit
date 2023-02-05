@@ -9,7 +9,7 @@ contract("MyToken", accounts => {
   const chainId = 1;
 
   let token;
-  let name;  
+  let name;
 
   beforeEach(async () => {
     token = await MyToken.deployed();
