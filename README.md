@@ -32,7 +32,7 @@ truffle migrate
 ## Running the tests
 To run the tests for the smart contract, use the following command:
 
-1. In the ./test/MyToken.js, don't forget to set the private key for the owner account to be able to sign:
+1. In the ./test/MyToken.js, don't forget to set the private key for the owner account to be able to sign the permission:
 ```bash
 const ownerPrivateKey = Buffer.from('owner-private-key-here', 'hex');
 const chainId = 1;
