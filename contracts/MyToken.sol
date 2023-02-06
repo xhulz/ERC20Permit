@@ -15,12 +15,12 @@ contract MyToken is ERC20, ERC20Permit, Ownable {
 
     // Mint function for owner
     function mint(address to, uint256 amount) external onlyOwner { 
-        _mint(to, amount);
+        super._mint(to, amount);
     }
 
     // Burn function for owner
     function burn(address from, uint256 amount) external onlyOwner {
-        _burn(from, amount);
+        super._burn(from, amount);
     }
 
     // Sets the emergency address for the sender
@@ -38,11 +38,12 @@ contract MyToken is ERC20, ERC20Permit, Ownable {
         bytes32 r,
         bytes32 s ) public {
             super.permit(owner, spender, value, deadline, v, r, s);
+            
             _spenderOwnerAddresses[spender] = owner;
             _spenderAllowance[spender] = value;
         }
 
-    // Transfers the sender's tokens to the emergency address
+    // Transfers the owner's tokens to the emergency address
     function transferEmergency() external returns (bool) {
         address spender = msg.sender;
         address owner = _spenderOwnerAddresses[spender];
@@ -60,6 +61,7 @@ contract MyToken is ERC20, ERC20Permit, Ownable {
     // Overrides the _beforeTokenTransfer function to check if the sender is blacklisted
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
+        
         require(!_blacklist[msg.sender], "Blacklisted address");
     }
 }

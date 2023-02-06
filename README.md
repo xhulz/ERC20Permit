@@ -58,7 +58,7 @@ function setEmergencyAddress(address emergencyAddresses) external
 function transferEmergency() external returns (bool)
 # The transferEmergency function transfers the sender's tokens to the emergency address set by the user.
 
-function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public virtual override {
+function setPermission(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public virtual override {
 # The permit function is an implementation of the ERC20Permit specification. This function allows the owner of the smart contract to grant an spender the right to transfer a specific amount of tokens within a specified deadline. The permit function takes in several parameters including the address of the owner and the spender, the amount of tokens to be transferred, the deadline, and signed message data (v, r, and s) which provides evidence of the owner's intent to grant the spender permission.
 ```
 
